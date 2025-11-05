@@ -1,0 +1,97 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+df = pd.read_csv("timestamp%2Caltitude_m%2Clatitude%2Clongitude%2Cbattery_vo.csv")
+
+#Displaying original file data to clean up
+df 
+
+ALT_MIN = 0
+ALT_MAX = 120   
+
+#THIS IS NOISE REMOVAL:
+
+invalid_mask = (df['altitude_m'] < ALT_MIN) | (df['altitude_m'] > ALT_MAX)
+print(f"\nNumber of altitude readings outside {ALT_MIN}-{ALT_MAX} m:", invalid_mask.sum())
+
+df_clean = df[~invalid_mask].copy()
+
+#HANDLING MISSING VALUES:
+
+df_clean['altitude_m'] = df_clean['altitude_m'].ffill()
+df_clean['altitude_m'] = df_clean['altitude_m'].fillna(df_clean['altitude_m'].mean())
+
+df_clean['latitude'] = df_clean['latitude'].ffill()
+df_clean['longitude'] = df_clean['longitude'].ffill()
+
+df_clean['flight_mode'] = df_clean['flight_mode'].ffill()
+
+df_clean['battery_voltage'] = df_clean['battery_voltage'].ffill()
+
+#SAVING CLEAN DATA TO A FILE NAMED CleanData.csv
+
+df_clean.to_csv("CleanData.csv", index=False)
+
+CleanData = pd.read_csv("CleanData.csv")
+
+print("\n=== CLEAN DATA FILE (First 10 Rows) ===")
+CleanData.head(10) 
+print("\nINFO OF CleanData FILE: \n")
+CleanData.info()
+
+#ROWS REMOVED
+print(f"\nRows before cleaning: {df.shape[0]}")
+print(f"Rows after cleaning: {df_clean.shape[0]}")
+print(f"Rows removed: {df.shape[0] - df_clean.shape[0]}")
+
+print("\nAfter cleaning, any nulls?")
+print(df_clean.isna().sum())
+
+alt_mean = df_clean['altitude_m'].mean()
+alt_max = df_clean['altitude_m'].max()
+alt_min = df_clean['altitude_m'].min()
+
+bat_mean = df_clean['battery_voltage'].mean()
+bat_min = df_clean['battery_voltage'].min()
+bat_max = df_clean['battery_voltage'].max()
+
+print("\n=== STATISTICS ===")
+print(f"Altitude → mean: {alt_mean:.2f} m, min: {alt_min:.2f} m, max: {alt_max:.2f} m")
+print(f"Battery  → mean: {bat_mean:.2f} V, min: {bat_min:.2f} V, max: {bat_max:.2f} V")
+
+plt.figure(figsize=(10, 4))
+plt.plot(df_clean['timestamp'], df_clean['altitude_m'], marker='o')
+plt.title("Drone Altitude Over Time")
+plt.xlabel("Timestamp")
+plt.ylabel("Altitude (m)")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+plt.figure(figsize=(10, 10))
+for mode, group in df_clean.groupby('flight_mode'):
+    plt.scatter(group['longitude'], group['latitude'], label=mode, s=50)
+
+print(df_clean.shape)
+print(df_clean[['latitude', 'longitude', 'flight_mode']].head(10))
+
+plt.figure(figsize=(10, 10))
+
+# Plot longitude vs latitude grouped by flight mode
+for mode, group in df_clean.groupby('flight_mode'):
+    plt.scatter(group['longitude'], group['latitude'], label=mode, s=50)
+
+plt.title("Drone Path (Longitude vs Latitude) by Flight Mode")
+plt.xlabel("Longitude")
+plt.ylabel("Latitude")
+
+# Add legend only if data exists
+if df_clean['flight_mode'].notna().any() and df_clean['flight_mode'].nunique() > 0:
+    plt.legend()
+
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+#bruh
