@@ -7,11 +7,11 @@
 //   R / G / B         -> change pen color
 //   anything else     -> reset pen to black and stop
 
-#include <chrono>
+#include <chrono>       //used for timing, basically how many inputs per second
 #include <termios.h>    // for turning off terminal buffering
 #include <unistd.h>     // for read()
-#include "rclcpp/rclcpp.hpp"
-#include "geometry_msgs/msg/twist.hpp"
+#include "rclcpp/rclcpp.hpp"    //main ros2 library
+#include "geometry_msgs/msg/twist.hpp"   //control linear and angular velocity
 #include "turtlesim/srv/set_pen.hpp"
 
 using namespace std::chrono_literals;
@@ -76,11 +76,11 @@ private:
   void handleKey(int key)
   {
     // arrow keys come as ESC [ A/B/C/D
-    if (key == 27) {                // ESC
+    if (key == 27) {                // ESC  // THESE ARE THE ASCII VALUES FOR KEYBOARD, when 27 is seen the compiler knows that its gonna expect an arrow key
       int k1 = readKey();
       int k2 = readKey();
       if (k1 == 91) {               // '['
-        if (k2 == 65) { moveForward();  return; } // Up
+        if (k2 == 65) { moveForward();  return; } // Up        //ascii for A
         if (k2 == 66) { moveBackward(); return; } // Down
         if (k2 == 67) { turnRight();    return; } // Right
         if (k2 == 68) { turnLeft();     return; } // Left
@@ -88,7 +88,7 @@ private:
     }
 
     // normal single characters
-    char c = static_cast<char>(key);
+    char c = static_cast<char>(key);   
 
     switch (c) {
       // movement
@@ -129,7 +129,7 @@ private:
     }
   }
 
-  /* ==== movement helper functions ==== */
+
   void moveForward()
   {
     current_linear_ = normal_linear_speed_;
@@ -170,7 +170,7 @@ private:
   /* ==== pen helper ==== */
   void setPenColor(uint8_t r, uint8_t g, uint8_t b)
   {
-    // wait for service (non-blocking check)
+
     if (!pen_client_->wait_for_service(0s)) {
       RCLCPP_WARN(this->get_logger(), "set_pen service not available yet");
       return;
@@ -186,20 +186,20 @@ private:
     pen_client_->async_send_request(request);
   }
 
-  /* ==== keyboard raw-mode stuff ==== */
+ 
   void enableRawMode()
   {
     tcgetattr(STDIN_FILENO, &original_termios_);
     termios raw = original_termios_;
-    raw.c_lflag &= ~(ICANON | ECHO);  // no buffering, no echo to screen
-    raw.c_cc[VMIN] = 0;               // 0 = nonblocking
+    raw.c_lflag &= ~(ICANON | ECHO);  // chatgpt hai im ngl this part especially
+    raw.c_cc[VMIN] = 0;               // Basically lets real time input happen, meaning as soon as a key is entered, that value is input   
     raw.c_cc[VTIME] = 0;
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
   }
 
   void disableRawMode()
   {
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios_);
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios_);   
   }
 
   // return pressed key, or -1 if no key was pressed
